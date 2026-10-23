@@ -1,0 +1,13 @@
+{
+  "id": "e21",
+  "slug": "express-exception-board",
+  "name": "快递异常件看板",
+  "version": "0.1.0",
+  "repo": "campfire-code/express-exception-board",
+  "license": "MIT",
+  "ui": {
+    "layout": "b",
+    "palette": "amber"
+  },
+  "upstream": null
+}

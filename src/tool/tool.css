@@ -1,0 +1,23 @@
+/* 快递异常件看板：只用 kit.css 的变量，类名以 ex- 开头。 */
+.ex-root { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.ex-top { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; }
+.ex-top .k-field { min-width: 150px; }
+.ex-seg { display: inline-flex; gap: 6px; }
+.ex-note { display: flex; align-items: flex-start; gap: 6px; font-size: .88em; margin: 0; line-height: 1.55; }
+.ex-risk { font-size: .88em; margin: 0; padding: 8px 12px; border-radius: var(--radius); background: var(--side); line-height: 1.55; }
+.ex-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; }
+.ex-sum > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: var(--radius); background: var(--side); }
+.ex-sum b { font-size: 1.4em; line-height: 1.2; }
+.ex-sum .k-muted { font-size: .85em; }
+.ex-main { padding: 12px 16px; display: grid; gap: 10px; align-content: start; min-height: 260px; }
+.ex-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ex-chip { padding: 3px 11px; border-radius: 999px; border: 1px solid var(--line-strong); background: transparent; font: inherit; cursor: pointer; color: inherit; }
+.ex-chip[aria-pressed='true'] { background: var(--primary); border-color: var(--primary); color: #fff; }
+.ex-table { max-height: 300px; }
+.ex-ctx { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .85em; background: var(--side); }
+.ex-tag.hi { background: color-mix(in srgb, #d92d20 16%, transparent); color: #b42318; }
+.ex-tag.mid { background: color-mix(in srgb, #f79009 20%, transparent); color: #b54708; }
+.ex-tag.ok { background: color-mix(in srgb, #12b76a 16%, transparent); color: #067647; }
+.ex-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ex-file { display: flex; align-items: center; gap: 8px; min-width: 0; }
