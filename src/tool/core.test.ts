@@ -110,7 +110,7 @@ describe('汇总与清单', () => {
     const rows = readShipments(sampleGrid(NOW)).shipments.map((s) => ({ s, v: judge(s, traceFromRow(s, NOW), null, NOW, DEFAULT_OPTS) }));
     expect(summarize(rows)).toEqual({ total: 12, alerts: 7, return: 2, exception: 1, stagnant: 4, delivered: 2, error: 0 });
     expect(alertText(rows).split('\n')).toHaveLength(7);
-    expect(alertText(rows)).toContain('退回件｜申通 SAMPLE000004｜示例订单-004');
+    expect(alertText(rows)).toContain('退回件｜申通 STO7301240004｜订单-231024004');
   });
   it('导出文件名', () => expect(exportFileName(new Date(2026, 9, 23, 9, 5))).toBe('快递异常件-20261023-0905.xlsx'));
 });

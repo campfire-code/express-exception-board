@@ -14,7 +14,7 @@ export const GAP_MS = 300;
 
 export function validate(mode: Mode, shipments: Shipment[], cred: Credentials, demo: boolean): string | null {
   if (!shipments.length) return '请先导入表格（需要有「快递单号」列）';
-  if (mode === 'api' && !demo && !credReady(cred)) return '接口模式需要填写快递100 的授权码（customer）和 Key';
+  if (mode === 'api' && !demo && !credReady(cred)) return '接口模式需要填写快递100 的授权码和授权 Key';
   return null;
 }
 

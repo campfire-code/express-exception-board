@@ -107,37 +107,40 @@ export function Main({ ctx }: { ctx?: Ctx }) {
 
   const sum = useMemo(() => summarize(rows), [rows]);
   const shown = rows.filter((r) => (filter === 'all' ? true : filter === 'alerts' ? ALERT_CATEGORIES.includes(r.v.category) : r.v.category === filter));
-  const chip = (k: Filter, label: string, n: number) => <button key={k} className="ex-chip" aria-pressed={filter === k} onClick={() => setFilter(k)}>{label} {n}</button>;
   const cnt = (c: Category) => rows.filter((r) => r.v.category === c).length;
   const apiMode = !demo && prefs.mode === 'api';
+  const thr = prefs.stagnantHours;
+  const peak = Math.max(0, ...shown.map((r) => r.v.idleHours ?? 0));
+  const axis = Math.max(Math.ceil(Math.max(thr * 1.5, peak) / 24) * 24, 24);
+  const tiles: { k: Filter; label: string; n: number; tone: string }[] = [
+    { k: 'alerts', label: '需要处理', n: sum.alerts, tone: 'hi' },
+    ...(['return', 'refused', 'exception', 'stagnant', 'notrace'] as Category[]).filter(cnt).map((c) => ({ k: c as Filter, label: CATEGORY_LABEL[c], n: cnt(c), tone: sev(c) })),
+    ...(['normal', 'delivered', 'error'] as Category[]).filter(cnt).map((c) => ({ k: c as Filter, label: CATEGORY_LABEL[c], n: cnt(c), tone: c === 'error' ? 'mid' : 'ok' })),
+  ];
 
   return (
     <div className="ex-root">
-      <p className="ex-risk"><TriangleAlert size={13} /> 数据来源只有两种：你自己导出的运单表（表里自带最新状态与更新时间），或用你自己的快递100 企业版授权码调用其<b>官方</b>实时查询接口。本工具不爬取任何快递网站。接口模式会消耗你账号的查询单量，同一单号官方建议间隔至少 30 分钟、24 小时内不超过 48 次，工具会自动遵守并沿用缓存。</p>
-      <section className="k-panel ex-top">
-        <div className="k-field">
-          <span className="k-label">数据来源</span>
-          <span className="ex-seg">
+      <section className="ex-bar">
+        <div className="ex-grp"><span className="k-label">数据来源</span>
+          <span className="ex-seg" role="group" aria-label="数据来源">
             <button className="ex-chip" aria-pressed={prefs.mode === 'table'} disabled={busy} onClick={() => setP({ mode: 'table' })}>表格自带轨迹</button>
             <button className="ex-chip" aria-pressed={prefs.mode === 'api'} disabled={busy || demo} onClick={() => setP({ mode: 'api' })}>快递100 接口</button>
           </span>
         </div>
-        <div className="k-field">
-          <label className="k-label" htmlFor="ex-hours">停滞阈值（小时）</label>
-          <input id="ex-hours" className="k-input" type="number" min={1} max={720} value={prefs.stagnantHours} disabled={busy} onChange={(e) => setP({ stagnantHours: Math.max(1, Math.min(720, Number(e.target.value) || 48)) })} />
+        <div className="ex-grp"><label className="k-label" htmlFor="ex-hours">停滞阈值</label>
+          <span className="ex-hours"><input id="ex-hours" className="k-input" type="number" min={1} max={720} value={prefs.stagnantHours} disabled={busy} onChange={(e) => setP({ stagnantHours: Math.max(1, Math.min(720, Number(e.target.value) || 48)) })} />小时</span>
         </div>
         {apiMode && (
           <>
-            <div className="k-field">
-              <label className="k-label" htmlFor="ex-cu">授权码 customer</label>
+            <div className="ex-grp"><label className="k-label" htmlFor="ex-cu">授权码</label>
               <input id="ex-cu" className="k-input" autoComplete="off" spellCheck={false} disabled={busy} value={cred.customer} placeholder={cred.customer ? maskSecret(cred.customer) : ''} onChange={(e) => setCred({ ...cred, customer: e.target.value })} />
             </div>
-            <div className="k-field">
-              <label className="k-label" htmlFor="ex-key">授权 Key</label>
+            <div className="ex-grp"><label className="k-label" htmlFor="ex-key">授权 Key</label>
               <input id="ex-key" className="k-input" type="password" autoComplete="off" spellCheck={false} disabled={busy} value={cred.key} placeholder={cred.key ? maskSecret(cred.key) : ''} onChange={(e) => setCred({ ...cred, key: e.target.value })} />
             </div>
           </>
         )}
+        <span className="ex-sp" />
         <div className="ex-actions">
           <button className="k-btn" disabled={busy || !ctx} onClick={() => void pickFiles(['xlsx', 'csv'], '运单表').then((p) => { if (p.length) void importFiles(p); })}><FileUp size={14} />导入运单表</button>
           <button className="k-btn" disabled={busy} onClick={loadDemo}>载入示例</button>
@@ -145,50 +148,71 @@ export function Main({ ctx }: { ctx?: Ctx }) {
             ? <button className="k-btn" onClick={() => abort.current?.abort()}><Square size={14} />停止</button>
             : <button className="k-btn primary" onClick={() => void start()}><Play size={14} />开始检查</button>}
         </div>
-        {apiMode && <p className="ex-note k-muted"><ShieldCheck size={13} /> 授权码只保存在本机，只发给 poll.kuaidi100.com。<button className="k-link" onClick={() => void openLink(DOCS)}>接口文档</button></p>}
       </section>
 
       {error && <div className="k-notice err" role="alert">{error}</div>}
       {notice && !error && <div className="k-notice ok">{notice}{hover ? ' 松开即可导入。' : ''}</div>}
       {busy && <div className="ex-file"><span className="k-spin" /> 正在检查：{prog.done} / {prog.total}</div>}
 
-      <section className="k-panel ex-main">
-        {!rows.length && !busy && <div className="k-empty"><p>导入运单表（需要「快递单号」列，可带快递公司、手机号、订单号、发货时间），或先点「载入示例」。</p><p className="k-muted">表格里带「物流状态、最后更新时间」时可直接判断；否则用快递100 接口逐单查询。</p></div>}
-        {rows.length > 0 && (
-          <>
-            <div className="ex-sum">
-              <div><b className="k-num">{sum.total}</b><span className="k-muted">运单</span></div>
-              <div><b className="k-num">{sum.alerts}</b><span className="k-muted">需要处理</span></div>
-              <div><b className="k-num">{sum.return}</b><span className="k-muted">退回 / 拒收</span></div>
-              <div><b className="k-num">{sum.exception}</b><span className="k-muted">疑难件</span></div>
-              <div><b className="k-num">{sum.stagnant}</b><span className="k-muted">停滞 / 无轨迹</span></div>
-              <div><b className="k-num">{sum.delivered}</b><span className="k-muted">已签收</span></div>
-            </div>
-            <div className="ex-chips">
-              {chip('alerts', '需要处理', sum.alerts)}{chip('all', '全部', sum.total)}
-              {(['return', 'refused', 'exception', 'stagnant', 'notrace', 'normal', 'delivered', 'error'] as Category[]).filter((c) => cnt(c)).map((c) => chip(c, CATEGORY_LABEL[c], cnt(c)))}
-            </div>
-            <div className="k-table-wrap k-scroll ex-table">
-              <table className="k-table">
-                <thead><tr><th>类型</th><th>单号</th><th>快递</th><th>订单/备注</th><th>原因</th><th>停滞</th><th>最新轨迹</th></tr></thead>
-                <tbody>{shown.map((r) => (
-                  <tr key={r.s.num}>
-                    <td><span className={`ex-tag ${sev(r.v.category)}`}>{r.v.label}</span></td>
-                    <td className="k-num">{r.s.num}</td><td>{r.s.carrier || r.s.com}</td><td>{r.s.ref}</td>
-                    <td>{r.v.reason}</td><td className="k-num">{r.v.idleHours == null ? '—' : `${r.v.idleHours} 小时`}</td>
-                    <td><div className="ex-ctx" title={r.v.lastContext}>{r.v.lastContext || '—'}</div></td>
-                  </tr>))}</tbody>
-              </table>
+      {!rows.length && !busy && (
+        <section className="ex-empty">
+          <svg viewBox="0 0 440 110" aria-hidden="true">
+            <line className="ex-s-rail" x1="12" y1="62" x2="428" y2="62" />
+            <line className="ex-s-thr" x1="290" y1="24" x2="290" y2="98" />
+            {[40, 110, 170, 230].map((x) => <circle key={x} className="ex-s-ok" cx={x} cy="62" r="7" />)}
+            <rect className="ex-s-bad" x="278" y="48" width="26" height="28" rx="6" />
+            <path className="ex-s-mark" d="M291 55v10m0 5v1" />
+            <rect className="ex-s-bad2" x="340" y="52" width="70" height="20" rx="6" />
+          </svg>
+          <div>
+            <b>把运单表，变成一条条停滞时间线</b>
+            <p className="k-muted">导入运单表（需要「快递单号」列，可带快递公司、手机号、订单号、发货时间），或先点「载入示例」。表里带「物流状态、最后更新时间」时可直接判断，否则用快递100 接口逐单查询。</p>
+          </div>
+        </section>
+      )}
+
+      {rows.length > 0 && (
+        <>
+          <div className="ex-head">
+            <div className="ex-big"><b className="k-num">{sum.alerts}</b><span>单需要处理<small>共 {sum.total} 单</small></span></div>
+            <div className="ex-tiles" role="group" aria-label="按类型筛选">
+              {tiles.map((t) => <button key={t.k} className={`ex-tile ${t.tone}`} aria-pressed={filter === t.k} onClick={() => setFilter(t.k)}><b className="k-num">{t.n}</b>{t.label}</button>)}
+              {filter !== 'all' && <button className="ex-tile all" onClick={() => setFilter('all')}>显示全部</button>}
             </div>
             <div className="ex-actions">
               <button className="k-btn primary" onClick={() => void exportXlsx()}><Download size={14} />导出 Excel</button>
               <CopyButton text={alertText(rows)} label="复制异常清单" />
-              {saved && <span className="ex-file"><span className="k-ellipsis" title={saved}>{saved}</span>{!preview && <button className="k-link" onClick={() => void reveal(saved)}><FolderOpen size={14} />在文件夹中显示</button>}</span>}
             </div>
-            {demo && <p className="k-muted ex-note">当前是示例数据（虚构），不是真实运单。</p>}
-          </>
-        )}
-      </section>
+          </div>
+          {saved && <div className="ex-file"><Download size={14} /><span className="k-ellipsis" title={saved}>{saved}</span>{!preview && <button className="k-link" onClick={() => void reveal(saved)}><FolderOpen size={14} />在文件夹中显示</button>}</div>}
+          <div className="ex-tl" style={{ ['--t' as string]: thr / axis }}>
+            <div className="ex-axis"><span>已停滞时长</span><div className="ex-ruler"><i style={{ left: 0 }}>0</i><i className="thr" style={{ left: `${(thr / axis) * 100}%` }}>阈值 {thr} 小时</i><i style={{ right: 0 }}>{axis} 小时</i></div><span /></div>
+            <ol className="ex-list">
+              {shown.map((r) => {
+                const h = r.v.idleHours;
+                return (
+                  <li key={r.s.num} className={`ex-row ${sev(r.v.category)}`}>
+                    <div className="ex-who">
+                      <div className="ex-l1"><span className={`ex-tag ${sev(r.v.category)}`}>{r.v.label}</span><span className="ex-num k-num">{r.s.num}</span><span className="ex-sub">{r.s.carrier || r.s.com}{r.s.ref ? ` · ${r.s.ref}` : ''}</span></div>
+                      <p className="ex-ctx" title={r.v.lastContext}><b>{r.v.reason}</b>{r.v.lastContext ? <span className="k-muted">　{r.v.lastContext}</span> : null}</p>
+                    </div>
+                    <div className="ex-track" role="img" aria-label={h == null ? '没有停滞时长' : `已停滞 ${h} 小时`}>{h != null && <i style={{ width: `${Math.min(100, (h / axis) * 100)}%` }} />}</div>
+                    <div className="ex-h k-num">{h == null ? '—' : <>{h}<small>小时</small></>}</div>
+                  </li>
+                );
+              })}
+              {!shown.length && <li className="ex-none k-muted">这一类没有运单</li>}
+            </ol>
+          </div>
+          {demo && <p className="k-muted ex-note">当前是示例数据（虚构），不是真实运单。</p>}
+        </>
+      )}
+
+      <details className="ex-risk">
+        <summary><TriangleAlert size={13} />数据来源与合规说明</summary>
+        <p>数据来源只有两种：你自己导出的运单表（表里自带最新状态与更新时间），或用你自己的快递100 企业版授权码调用其<b>官方</b>实时查询接口。本工具不爬取任何快递网站。接口模式会消耗你账号的查询单量，同一单号官方建议间隔至少 30 分钟、24 小时内不超过 48 次，工具会自动遵守并沿用缓存。</p>
+        {apiMode && <p className="ex-note"><ShieldCheck size={13} /> 授权码只保存在本机，只发给快递100 官方接口。<button className="k-link" onClick={() => void openLink(DOCS)}>接口文档</button></p>}
+      </details>
     </div>
   );
 }

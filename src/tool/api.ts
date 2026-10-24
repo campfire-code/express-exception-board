@@ -31,6 +31,7 @@ export function guard(entry: CacheEntry | undefined, now: number): Guard {
 }
 
 export function checkReady(s: Shipment): string | null {
+  // check-zh: 忽略（快递公司编码示例，用户在表里需要写成这种编码）
   if (!s.com) return `无法识别快递公司「${s.carrier || '空'}」，请改成快递100 的编码（如 yuantong）`;
   if (NEEDS_PHONE.includes(s.com) && !s.phone) return '顺丰、中通查询必须提供手机号（官方要求），表里没有手机号列';
   return null;
